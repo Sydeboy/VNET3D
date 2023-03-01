@@ -208,7 +208,8 @@ def grouper(iterable, n):
 #                           ]))
 #
 # trainloader = DataLoader(DB, batch_size=8, shuffle=True)
-# #在使用 trainloader 对数据进行迭代时，可以得到一个批次的数据，其中每个样本包括一个 3D 图像数据和一个相应的标签。在这个示例中，使用一个 for 循环来迭代训练集中的所有批次数据。在每次迭代中，将一个批次的数据打印出来。
+# #在使用 trainloader 对数据进行迭代时，可以得到一个批次的数据，其中每个样本包括一个 3D 图像数据
+# 和一个相应的标签。在这个示例中，使用一个 for 循环来迭代训练集中的所有批次数据。在每次迭代中，将一个批次的数据打印出来。
 # for i_batch, sampled_batch in enumerate(trainloader()):
 #     # generate paired iput
 #     print(sampled_batch)
