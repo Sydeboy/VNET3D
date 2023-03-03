@@ -8,7 +8,10 @@ import paddle.nn as nn
 import paddle
 
 
-class ConvBlock(nn.layer):
+# print(nn.Layer)
+class ConvBlock(nn.Layer):
+    # 记录一下报错代码，nn.layer是一个模块名   --><module 'paddle.nn.layer' from 'D:
+    # nn.Layer是个类 --> class 'paddle.fluid.dygraph.layers.Layer'>
     # torch版本 class ConvBlock(nn.Module)
     def __init__(self, n_stages, n_filters_in, n_filters_out, normalization='none'):
         # ConvBlock继承父类
@@ -39,7 +42,7 @@ class ConvBlock(nn.layer):
         return x
 
 
-class ResidualConvBlock(nn.layer):
+class ResidualConvBlock(nn.Layer):
     """
     残差+卷积
     """
@@ -75,7 +78,7 @@ class ResidualConvBlock(nn.layer):
         return x
 
 
-class DownsamplingConvBlock(nn.layer):
+class DownsamplingConvBlock(nn.Layer):
     def __init__(self, n_filters_in, n_filters_out, stride=2, normalization='none'):
         super(DownsamplingConvBlock, self).__init__()
 
@@ -102,7 +105,7 @@ class DownsamplingConvBlock(nn.layer):
         return x
 
 
-class UpsamplingDeconvBlock(nn.layer):
+class UpsamplingDeconvBlock(nn.Layer):
     def __init__(self, n_filters_in, n_filters_out, stride=2, normalization='none'):
         super(UpsamplingDeconvBlock, self).__init__()
 
@@ -129,7 +132,7 @@ class UpsamplingDeconvBlock(nn.layer):
         return x
 
 
-class Upsampling(nn.layer):
+class Upsampling(nn.Layer):
     def __init__(self, n_filters_in, n_filters_out, stride=2, normalization='none'):
         super(Upsampling, self).__init__()
 
@@ -153,7 +156,7 @@ class Upsampling(nn.layer):
         return x
 
 
-class VNetMultiHead(nn.layer):
+class VNetMultiHead(nn.Layer):
     def __init__(self, n_channels=3, n_classes=2, n_filters=16, normalization='none', has_dropout=False):
         super(VNetMultiHead, self).__init__()
         self.has_dropout = has_dropout
@@ -171,21 +174,75 @@ class VNetMultiHead(nn.layer):
         self.block_four_dw = DownsamplingConvBlock(n_filters * 8, n_filters * 16, normalization=normalization)
 
         self.block_five = ConvBlock(3, n_filters * 16, n_filters * 16, normalization=normalization)
-        self.block_five_up = DownsamplingConvBlock(n_filters * 16, n_filters * 8, normalization=normalization)
+        self.block_five_up = UpsamplingDeconvBlock(n_filters * 16, n_filters * 8, normalization=normalization)
 
         self.block_six = ConvBlock(3, n_filters * 8, n_filters * 8, normalization=normalization)
-        self.block_six_up = DownsamplingConvBlock(n_filters * 8, n_filters * 4, normalization=normalization)
+        self.block_six_up = UpsamplingDeconvBlock(n_filters * 8, n_filters * 4, normalization=normalization)
 
         self.block_seven = ConvBlock(3, n_filters * 4, n_filters * 4, normalization=normalization)
-        self.block_seven_up = DownsamplingConvBlock(n_filters * 4, n_filters * 2, normalization=normalization)
+        self.block_seven_up = UpsamplingDeconvBlock(n_filters * 4, n_filters * 2, normalization=normalization)
 
         self.block_eight = ConvBlock(2, n_filters * 2, n_filters * 2, normalization=normalization)
-        self.block_eight_up = DownsamplingConvBlock(n_filters * 2, n_filters, normalization=normalization)
+        self.block_eight_up = UpsamplingDeconvBlock(n_filters * 2, n_filters, normalization=normalization)
 
         self.block_nine = ConvBlock(1, n_filters, n_filters, normalization=normalization)
-        self.logits_out = nn.Conv3D(n_filters, out_channels=n_classes, kernel_size=1, stride=1, padding=0)
+
+        self.logits_out = nn.Conv3D(n_filters, n_classes, kernel_size=1, stride=1, padding=0)
         self.dis_out = nn.Conv3D(n_filters, n_classes - 1, kernel_size=1, stride=1, padding=0)
         self.dropout = nn.Dropout3D(p=0.5)
+
+    def encoder(self, input):
+        x1 = self.block_one(input)
+        x1_dw = self.block_one_dw(x1)
+
+        x2 = self.block_two(x1_dw)
+        x2_dw = self.block_two_dw(x2)
+
+        x3 = self.block_three(x2_dw)
+        x3_dw = self.block_three_dw(x3)
+
+        x4 = self.block_four(x3_dw)
+        x4_dw = self.block_four_dw(x4)
+
+        x5 = self.block_five(x4_dw)
+        if self.has_dropout:
+            x5 = self.dropout(x5)
+
+        res = [x1, x2, x3, x4, x5]
+        return res
+
+    def decoder(self, features):
+        x1 = features[0]
+        x2 = features[1]
+        x3 = features[2]
+        x4 = features[3]
+        x5 = features[4]
+
+        x5_up = self.block_five_up(x5)
+        x5_up = x5_up + x4
+
+        x6 = self.block_six(x5_up)
+        x6_up = self.block_six_up(x6)
+        x6_up = x6_up + x3
+
+        x7 = self.block_seven(x6_up)
+        x7_up = self.block_seven_up(x7)
+        x7_up = x7_up + x2
+
+        x8 = self.block_eight(x7_up)
+        x8_up = self.block_eight_up(x8)
+        x8_up = x8_up + x1
+
+        x9 = self.block_nine(x8_up)
+        if self.has_dropout:
+            x9 = self.dropout(x9)
+
+        out_logits = self.logits_out(x9)
+        out_dis = self.dis_out(x9)
+        return out_logits, out_dis
+
+
+
 
 
 
