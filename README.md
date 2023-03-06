@@ -24,5 +24,14 @@ $$
 
 在V-Net中，Dice损失定义为1-Dice系数。在分割算法中，假设像素点总数为$N$,$p_i$表示第$i$个样本的问题，$g_i$表示该像素的Ground Truth，那么Dice Loss可以表示为：
 $$
-\ell_{dice}=\frac{2\sum{_i}{}
+\ell_{Dice}=\frac{\sum_{i}^Np_ig_i}{\sum_{i}^{n}p_i^2+\sum_{i}^Ng_i^2} \tag{3}
 $$
+
+```python
+def dice_loss(target, predictive, ep=le-8):
+    intersection = 2 * torch.sum(predictive * target) + ep
+    union = torch.sum(predictive) + torch.sum(target) + ep
+    loss = 1 - intersection / union
+    return loss
+```
+
