@@ -12,10 +12,13 @@
 - 衡量两个集合的交并比
 
 
+# latex形式
+![](http://latex.codecogs.com/svg.latex?公式代码)
+# image形式
+![](http://latex.codecogs.com/svg.image?公式代码)
 
 $$
-![](http://latex.codecogs.com/svg.latex?Dice=\frac{2|{X}\bigcap{Y}|}{|X|+|Y|}=\frac{2TP}{2TP+FP+TN} \tag{1})
-
+Dice=\frac{2|{X}\bigcap{Y}|}{|X|+|Y|}=\frac{2TP}{2TP+FP+TN} \tag{1}
 $$
 
 Iou又叫做Jaccard系数：
