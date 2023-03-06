@@ -14,8 +14,6 @@
 
 # latex形式
 ![](http://latex.codecogs.com/svg.latex?公式代码)
-# image形式
-![](http://latex.codecogs.com/svg.image?公式代码)
 
 $$
 Dice=\frac{2|{X}\bigcap{Y}|}{|X|+|Y|}=\frac{2TP}{2TP+FP+TN} \tag{1}
@@ -29,6 +27,7 @@ $$
 ### 2.Dice Loss
 
 在V-Net中，Dice损失定义为1-Dice系数。在分割算法中，假设像素点总数为$N$,$p_i$表示第$i$个样本的问题，$g_i$表示该像素的Ground Truth，那么Dice Loss可以表示为：
+![](http://latex.codecogs.com/svg.latex?公式代码)
 $$
 \ell_{dice}=\frac{2\sum{_i}{}
 $$
