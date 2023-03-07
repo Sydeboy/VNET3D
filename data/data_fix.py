@@ -20,18 +20,24 @@ class LAHeart(Dataset):
     """ LA Dataset"""
 
     def __init__(self, base_dir=None, split='train', num=None, transform=None):
-        self.base_dir = base_dir
+        self._base_dir = base_dir
         self.transform = transform
         self.sample_list = []
+        filename = '../C4'  # 上一层文件中的C4文件，用于代码和文件不在同一文件夹
         if split == 'train':
-            with open(self._base_dir + './../train.list', 'r') as f:
+            # 单独定义一个路径
+            file_path = filename + '/train.list'
+            print(file_path)
+            with open(file_path, 'r') as f:
                 self.image_list = f.readlines()
         elif split == 'test':
-            with open(self._base_dir + './../test.list', 'r') as f:
+            file_path = filename + '/test.list'
+            print(file_path)
+            with open(file_path, 'r') as f:
                 self.image_list = f.readlines()
-        self.image_list = [item.replace('\n', '') for item in self.image_list]
+        self.image_list = [item.replace('\n', '') for item in self.image_list]  # 替换换行符
         if num is not None:
-            self.image_list = self.image_list[:num]
+            self.image_list = self.image_list[:num]  # 如果电脑内存足够，可以截取所有图像
         print("total {} samples".format(len(self.image_list)))
 
     def __len__(self):
@@ -39,8 +45,10 @@ class LAHeart(Dataset):
 
     def __getitem__(self, idx):
         image_name = self.image_list[idx]
+        # print(image_name)
         # 读取
         # 首先拼接HDF5的文件路径，标记只读
+        # print(self._base_dir + "/" + image_name + "/mri_norm2.h5")
         h5f = h5py.File(self._base_dir + "/" + image_name + "/mri_norm2.h5", 'r')
         # 读取image的数据集，赋值到image，并读取全部
         image = h5f['image'][:]
@@ -74,9 +82,9 @@ class RandomCrop(object):
             label = np.pad(label, [(pw, pw), (ph, ph), (pd, pd)], mode='constant', constant_values=0)
 
         (w, h, d) = image.shape
-        w1 = np.random.randint(0, w - self.output_size(0))
-        h1 = np.random.randint(0, h - self.output_size(1))
-        d1 = np.random.randint(0, d - self.output_size(2))
+        w1 = np.random.randint(0, w - self.output_size[0])
+        h1 = np.random.randint(0, h - self.output_size[1])
+        d1 = np.random.randint(0, d - self.output_size[2])
 
         label = label[w1:w1 + self.output_size[0], h1:h1 + self.output_size[1], d1:d1 + self.output_size[2]]
         image = image[w1:w1 + self.output_size[0], h1:h1 + self.output_size[1], d1:d1 + self.output_size[2]]
@@ -127,16 +135,16 @@ class CreateOnehotLabel(object):
          其中只有与该标签值对应的位置为1，其余位置为0
     """
 
-    def __init__(self, num_class):
+    def __init__(self, num_classes):
         # num_class表示创建one-hot编码类别数,也就是标签类别数
-        self.num_class = num_class
+        self.num_classes = num_classes
 
     def __call__(self, sample):
         image, label = sample['image'], sample['label']
         # 1.生成一个全零矩阵--> [num_class, h, w, d]
         # 2.对每个标签类别，将one-hot中对应的通道，也就是i通道中与之对应相同的像素点值设为1
-        onehot_label = np.zeros((self.num_class, label.shape[0], label.shape[1], label.shape[2]), dtype=np.float32)
-        for i in range(self.num_class):
+        onehot_label = np.zeros((self.num_classes, label.shape[0], label.shape[1], label.shape[2]), dtype=np.float32)
+        for i in range(self.num_classes):
             onehot_label[i, :, :, :] = (label == i).astype(np.float32)
         return {'image': image, 'label': label, 'onehot_label': onehot_label}
 

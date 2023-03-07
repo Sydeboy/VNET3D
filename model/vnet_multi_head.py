@@ -241,6 +241,18 @@ class VNetMultiHead(nn.Layer):
         out_dis = self.dis_out(x9)
         return out_logits, out_dis
 
+    def forward(self, input, turnoff_drop=False):
+        if turnoff_drop:
+            turnoff_drop = self.has_dropout
+            self.has_dropout = False
+
+        features = self.encoder(input)
+        out_logits, out_dis = self.decoder(features)
+        if turnoff_drop:
+            self.has_dropout = turnoff_drop  # 此处存疑
+
+        return out_logits, out_dis
+
 
 
 

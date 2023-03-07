@@ -34,11 +34,11 @@ https://arxiv.org/abs/1908.05099
 """
 parser = argparse.ArgumentParser()
 # 注意修改这里的路径，暂时不改
-parser.add_argument('--root_path', type=str, default='./C4/C4_Z=20', help='Name of Experiment')
+parser.add_argument('--root_path', type=str, default='../C4/C4_Z=20', help='Name of Experiment')
 parser.add_argument('--exp', type=str, default='vnet_dp_la_MH_FGDTM_L1PlusL2',
                     help='model_name;dp:add dropout; MH:multi-head')
 parser.add_argument('--max_iterations', type=int, default=10000, help='maximum epoch number to train')
-parser.add_argument('--batch_size', type=int, default=8, help='batch_size per gpu')
+parser.add_argument('--batch_size', type=int, default=2, help='batch_size per gpu')
 parser.add_argument('--base_lr', type=float, default=0.01, help='maximum epoch number to train')
 parser.add_argument('--deterministic', type=int, default=1, help='whether use deterministic training')
 parser.add_argument('--gpu', type=str, default='0', help='GPU to use')
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     db_train = LAHeart(base_dir=train_data_path, split='train', num=16,
                        transform=transforms.Compose([
                            RandomRotFlip(),
-                           RandomCrop(),
+                           RandomCrop(patch_size),
                            ToTensor(),
                        ]))
 
@@ -119,6 +119,7 @@ if __name__ == "__main__":
 
 
     trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True)
+    print(len(trainloader))
 
     optimizer = paddle.optimizer.Momentum(parameters=net.parameters(), learning_rate=base_lr, momentum=0.9,
                                           weight_decay=0.0001)
