@@ -37,7 +37,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--root_path', type=str, default='../C4/C4_Z=20', help='Name of Experiment')
 parser.add_argument('--exp', type=str, default='vnet_dp_la_MH_FGDTM_L1PlusL2',
                     help='model_name;dp:add dropout; MH:multi-head')
-parser.add_argument('--max_iterations', type=int, default=10000, help='maximum epoch number to train')
+parser.add_argument('--max_iterations', type=int, default=100, help='maximum epoch number to train')
 parser.add_argument('--batch_size', type=int, default=2, help='batch_size per gpu')
 parser.add_argument('--base_lr', type=float, default=0.01, help='maximum epoch number to train')
 parser.add_argument('--deterministic', type=int, default=1, help='whether use deterministic training')
@@ -45,7 +45,8 @@ parser.add_argument('--gpu', type=str, default='0', help='GPU to use')
 args = parser.parse_args()
 
 train_data_path = args.root_path
-snapshot_path = "./model_la/" + args.exp + "/"  # 拼接路径，exp的路径
+snapshot_path = "../model_la/" + args.exp + "/"  # 拼接路径，exp的路径
+print(snapshot_path)
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu  # 指定使用的显卡
 batch_size = args.batch_size * len(args.gpu.split(','))  # 多GPU训练
@@ -99,8 +100,14 @@ def compute_dtm(img_gt, out_shape):
 
 if __name__ == "__main__":
 
-    logging.basicConfig(filename=snapshot_path + "/log.txt", level=logging.INFO,
+    # log文件
+    log_path = r'E:\code\VNET\model_la\vnet_dp_la_MH_FGDTM_L1PlusL2\log.txt'
+    if not os.path.exists(log_path):
+        os.mkdir(log_path)
+    logging.basicConfig(filename=log_path, level=logging.INFO,
                         format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='&H:&M:&S')
+    # logging.basicConfig(filename=snapshot_path + "/log.txt", level=logging.INFO,
+    #                     format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='&H:&M:&S')
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     logging.info(str(args))
 
@@ -119,7 +126,7 @@ if __name__ == "__main__":
 
 
     trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True)
-    print(len(trainloader))
+    # print(len(trainloader))
 
     optimizer = paddle.optimizer.Momentum(parameters=net.parameters(), learning_rate=base_lr, momentum=0.9,
                                           weight_decay=0.0001)
@@ -143,6 +150,7 @@ if __name__ == "__main__":
             outputs = paddle.transpose(outputs, perm=[0, 2, 3, 4, 1])
             # compute CE + Dice loss
             # loss_ce = F.cross_entropy(outputs, label_batch)
+            # 交叉熵损失
             loss_ce = F.cross_entropy(input=outputs, label=label_batch)
 
             outputs = paddle.transpose(outputs, perm=[0, 4, 1, 2, 3])
@@ -150,6 +158,10 @@ if __name__ == "__main__":
 
             loss_dice = dice_loss(outputs_soft[:, 1, :, :, :], label_batch == 1)
             # compute L1 + L2 Loss
+            """
+            1.paddle.norm()计算L1范数，正则化，用来惩罚网络输出和目标输出之前的差异
+            2.F.mse_loss()用于计算MSE(均方误差损失)损失，用于衡量模型输出与真实之间的差异
+            """
             loss_dist = paddle.norm(out_dis - gt_dis, p=1) / paddle.numel(out_dis) + F.mse_loss(out_dis, gt_dis)
 
             loss = loss_ce + loss_dice + loss_dist
@@ -173,12 +185,21 @@ if __name__ == "__main__":
                 paddle.save(net.state_dict(), save_mode_path)
                 logging.info("save model to {}".format(save_mode_path))
 
+            # 写入txt文件
+            results = "iteration %d : loss_dist : %f, loss_dice : %f, loss : %f " \
+                      % (iter_num, loss_dist, loss_dice, loss)
+            with open(log_path, "a+") as f:
+                f.write(results + '\n')
+                f.close()
+
             if iter_num > max_iterations:
                 break
             time1 = time.time()
         if iter_num > max_iterations:
             break
+
         save_mode_path = os.path.join(snapshot_path, 'iter_' + str(max_iterations + 1) + '.pdparams')
         paddle.save(net.state_dict(), save_mode_path)
         paddle.save(optimizer.state_dict(), save_mode_path.replace('.pdparams', '.pdopt'))
         logging.info("save model to {}".format(save_mode_path))
+
